@@ -1,0 +1,37 @@
+import sys
+import os
+import cv2
+
+from models import getImage, sess, mylogger
+from gdrive import getImagesFromGDrive, createImageFromGDriveObject
+#from fs_emu import getImagesFromGDrive, createImageFromGDriveObject
+
+if __name__ == '__main__':
+
+    images, http = getImagesFromGDrive()
+    
+    print("opencv version: %s" % cv2.__version__)
+    
+    # Process each photo
+    for img_info in images:
+
+        img = createImageFromGDriveObject (img_info, http)
+        file_name = img_info['title']
+
+        mylogger.info("Process %s" % file_name)
+
+        # create image object     
+        try:    
+            dbimage = getImage(os.path.basename(file_name))
+            dbimage.img = img
+            dbimage.download_url = img_info["downloadUrl"]
+            dbimage.img_link = img_info['webContentLink'].replace('&export=download','')
+        except ValueError as e:
+            print e
+            continue
+             
+        # try to recognize image
+        if dbimage.identifyDigits():
+            mylogger.info("Result is %s" % dbimage.result)
+        
+sess.commit()
